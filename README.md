@@ -17,9 +17,9 @@ And vice versa any change to URL hash will be reflected in
 
 ## Example How It Works
 
-Just include `hashbang.min.js` javascript file on your page.
+Just include `hashbang.js` javascript file on your page.
 
-`<script src="my-directory-somewhere/hashbang.min.js"></script>`
+`<script src="my-directory-somewhere/hashbang.js"></script>`
 
 <pre>
   window.hashbang.gallery=[11, 12];
@@ -78,7 +78,7 @@ In this case after the user selects multiple images the URL will look for exampl
 `http://example.com/#gallery[]=9&gallery[]=1&gallery[]=4` .
 
 When this URL is shared and friend visits the page the `window.hashbang.gallery` array
-will contain the previously stored values so you can preselect the same images upon page load.
+will contain the previously stored values so you can pre-select the same images upon page load.
 
 ## Compatibility
 
@@ -98,13 +98,13 @@ You can listen to following events on `window` object:
 
 ## Advanced Configuration
 
-If you want to use '#' insead of '#!' then run the code
+If you want to use '#' instead of '#!' then run the code
 `window.hashbangSeparator="#";` before you include
 hashbang script.
 
 ## Tools
 
-Two usefull functions are provided for creation and parsing of hashbang hashes:
+Two useful functions are provided for creation and parsing of hashbang hashes:
 
 *   `window.hashbangParse(hash):object`
 *   `window.hashbangSerialize(object):hash`
@@ -117,10 +117,10 @@ var info=window.hashbangParse("#!gallery[]=11&amp;gallery[]=12&amp;zoom=2");
 
 ## Licensing Options
 
-Hashbang Object project is licensed under '''Affero General Public License'''
+Hashbang Object project is licensed under **Affero General Public License**
 
-If you need Hashbang Object for your commercial project 
-you may consider obtaining commercial license from 
+If you need Hashbang Object for your commercial project
+you may consider obtaining commercial license from
 [Web Developers Shop](http://www.webdevelopers.eu/).
 
 
