@@ -1,7 +1,5 @@
 /**
- * AFFERO GENERAL PUBLIC LICENSE v3 (AGPL3)
- * ----------------------------------------
- * You may consider obtaining commercial license from http://www.webdevelopers.eu/shop/11
+ * MIT LICENSE
  *
  * Compatibility: ie8+, other modern browsers
  * Note: Include jQuery on the page for ie8 to be able to fire hashbang-parse and hashbang-serialize events.
@@ -212,11 +210,11 @@
         if (getHash() == ourHash) {
             return; // triggered by our updateHash()
         }
-        var fireEvent='hashbang' in window;
+        var fireEvent='hashbang' in window ? 'hashbang-parse' : 'hashbang-init';
         var hash=getHash();
         ourHash=hash;
         hasHashbangFormat=isHashbang(hash);
-        if (!hasHashbangFormat) fireEvent=false;
+        if (!hasHashbangFormat) fireEvent='hashbang-unparsable';
         var obj=window.hashbangParse(hash);
 
         lock=true;
@@ -225,12 +223,8 @@
         lock=false;
 
         observe(window.hashbang);
-        log("Object updated: " + JSON.stringify(obj));
-        if (fireEvent) {
-            trigger('hashbang-parse');
-        } else {
-            trigger('hashbang-init');
-        }
+        log("Object updated (" + fireEvent + "): " + JSON.stringify(obj));
+        trigger(fireEvent);
     }
 
     function isHashbang(hash) {

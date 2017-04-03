@@ -114,14 +114,3 @@ Example:
 $(link).attr('href', window.hashbangSerialize({"a": 1, "b": 2}));
 var info=window.hashbangParse("#!gallery[]=11&amp;gallery[]=12&amp;zoom=2");
 </pre>
-
-## Licensing Options
-
-Hashbang Object project is licensed under **Affero General Public License**
-
-If you need Hashbang Object for your commercial project
-you may consider obtaining commercial license from
-[Web Developers Shop](http://www.webdevelopers.eu/).
-
-
-©2014 Daniel Ševčík
