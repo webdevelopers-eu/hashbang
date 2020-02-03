@@ -25,8 +25,14 @@
  *
  * window.hashbang.something={"any": 1, "else": [{"a":1}, {"b":2}]};
  *
- * If the URL hash conains unescape question mark then the path component before
+ * If the URL hash conains unescape question mark then the path component (starting with '/') before
  * question mark is stored in window.hashbang["#path"] special read/write property.
+ *
+ * Path component must start with '/'.
+ *
+ * #!/my/path?var1=1
+ * #!/my/path
+ *
  *
  * If you want to use '#' insead of '#!' then run this code before you include hashbang script:
  *   window.hashbangSeparator="#";
@@ -237,7 +243,7 @@
 
 	if (isHashbang(hash)) {
 	    var pointer;
-	    var pathRE=/^([/a-z0-9. %_~!$'()*+,;:@-]+)(\?|$)/i; // no '&=' even though path part allows it
+	    var pathRE=/^(\/[\/a-z0-9. %_~!$'()*+,;:@-]*)(\?|$)/i; // no '&=' even though path part allows it
 	    hash=hash.substr(window.hashbangSeparator.length); // remove '#!'
 	    if (hash.match(pathRE)) {
 		obj["#path"]=hash.match(pathRE)[1];
