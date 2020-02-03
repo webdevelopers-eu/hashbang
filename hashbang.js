@@ -163,7 +163,7 @@
 	    case 'number':
 	    case 'string':
 		var key=(keys.shift() || 'nokey') + (keys.length && '[' + keys.join('][') + ']' || '');
-		ret.push(key + '=' + encodeURIComponent(val));
+		ret.push(key + (("" + val).length ? '=' + encodeURIComponent(val) : ''));
 		break;
 	    case 'array':
 		for (i=0; i < val.length; i++) {
