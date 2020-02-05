@@ -82,8 +82,12 @@
     function setHash(hash) {
 	ourHash=hash;
 	// window.location.hash=ourHash; - FF unescapes the values
-	window.location.href=(window.location.href + '#').replace(/#.*$/, hash);
-	log("Set new hash: " + hash + " | current hash: " + getHash());
+	var url = (window.location.href + '#').replace(/#.*$/, hash.replace(/#+$/, ''));
+
+	//window.location.href=url; // Setting '#' or '' scrolls the page up in Ch73
+	history.replaceState({"hashbang": true}, "", url);
+
+	log("Set new hash: " + hash + " | current url: " + url);
     }
 
     function getHash() {
