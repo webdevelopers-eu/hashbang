@@ -25,7 +25,7 @@
  *
  * window.hashbang.something={"any": 1, "else": [{"a":1}, {"b":2}]};
  *
- * If the URL hash conains unescape question mark then the path component (starting with '/') before
+ * If the URL hash conains unescaped question mark then the path component (starting with '/') before
  * question mark is stored in window.hashbang["#path"] special read/write property.
  *
  * Path component must start with '/'.
@@ -46,7 +46,7 @@
  *
  * @package    Hashbang Object
  * @author     Daniel Sevcik <sevcik@webdevelopers.cz>
- * @version    1.0
+ * @version    2.0
  * @copyright  2014 Daniel Sevcik
  * @since      2014-07-16 22:22:34 UTC
  */
@@ -72,16 +72,14 @@
 
     window.hashbangSeparator=window.hashbangSeparator || '#!';
 
-    var lock=false;
-    var ourHash;
-    var lastSerialized;
+    var ourHashUpdate;
     var hasHashbangFormat=false;
     var updateTimeout;
     var hashbangInterval;
 
     function setHash(hash) {
-	ourHash=hash;
-	// window.location.hash=ourHash; - FF unescapes the values
+	ourHashUpdate=hash;
+	// window.location.hash=ourHashUpdate; - FF unescapes the values
 	var url = (window.location.href + '#').replace(/#.*$/, hash.replace(/#+$/, ''));
 
 	//window.location.href=url; // Setting '#' or '' scrolls the page up in Ch73
@@ -92,7 +90,8 @@
 
     function getHash() {
 	// window.location.hash - FF unescapes it!
-	return window.location.href.replace(/^[^#]+/, '');
+	// window.location.href.replace(/^[^#]+/, ''); - FF35 does escape it extra
+	return window.location.hash;
     }
 
     function trigger(name) {
@@ -125,42 +124,63 @@
 	}
     }
 
-    function observe(obj) {
-	// Observe Object
-	if (typeof Object.observe == 'function') {
-	    Object.observe(obj, updateHash);
-	    for (var i in obj) {
-		if (typeof obj[i] == 'object') {
-		    observe(obj[i]);
+    function createProxy(obj) {
+	if (typeof obj != 'object' || obj === null) {
+	    log("Warning: Hashbang data must be of type object, array, string, number! Received `" + (typeof obj) + "`", obj);
+	    obj = {};
+	}
+
+	return new Proxy(obj,{
+	    set: function(target, key, value) {
+		const changed = target[key] !== value;
+
+		log(`${key} = ${value}`);
+		if (typeof value === 'object') {
+		    target[key] = createProxy(value);
+		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
+		} else {
+		    target[key] = value;
+		}
+
+
+		if (changed) {
+		    updateHash();
+		}
+
+		return true;
+	    },
+
+	    deleteProperty: function(target, prop) {
+		if (prop in target) {
+		    delete target[prop];
+		    log(`delete ${prop}`);
+		    updateHash();
 		}
 	    }
-	} else {
-	    clearInterval(hashbangInterval);
-	    hashbangInterval=setInterval(function() {
-		var serialized=JSON.stringify(window.hashbang);
-		if (lastSerialized == serialized) return; // same
-		// log("Updating hash... last: " + lastSerialized + ", current: " + serialized);
-		lastSerialized=serialized;
-		updateHash();
-	    }, 500);
-	}
-	return obj;
+	});
     }
 
     function updateHash() { // Delay because when extensive window.hashbang modification the handler is called too often
-	clearTimeout(updateTimeout);
-	updateTimeout=setTimeout(function() {
-	    var hash=window.hashbangSerialize(window.hashbang);
-	    setHash(hash);
-	    observe(window.hashbang);
-	    trigger('hashbang-serialize');
-	}, 50);
+	var hash=window.hashbangSerialize(window.hashbang);
+	setHash(hash);
+
+	if (!updateTimeout) {
+	    updateTimeout=setTimeout(function() {
+		updateTimeout = null;
+		trigger('hashbang-serialize');
+	    }, 50);
+	}
     }
 
     window.hashbangSerialize=function(what) {
 	function serialize(keys, val) {
 	    // log('Serializing', keys, val);
 	    var ret=[], i;
+
+	    if (val === null) { // null is object
+		val='';
+	    }
+	    var valType=val instanceof Array ? 'array' : typeof val;
 
 	    switch (val instanceof Array ? 'array' : typeof val) {
 	    case 'boolean':
@@ -218,22 +238,19 @@
     }
 
     function updateObject() {
-	if (getHash() == ourHash) {
+	if (getHash() == ourHashUpdate) {
 	    return; // triggered by our updateHash()
 	}
 	var fireEvent='hashbang' in window ? 'hashbang-parse' : 'hashbang-init';
 	var hash=getHash();
-	ourHash=hash;
+	ourHashUpdate=hash;
 	hasHashbangFormat=isHashbang(hash);
 	if (!hasHashbangFormat) fireEvent='hashbang-unparsable';
 	var obj=window.hashbangParse(hash);
 
-	lock=true;
-	window.hashbang=obj;
-	lastSerialized=JSON.stringify(window.hashbang);
-	lock=false;
+	window.hashbang=createProxy(obj);
 
-	observe(window.hashbang);
+	// createProxy(window.hashbang);
 	log("Object updated (" + fireEvent + "): " + JSON.stringify(obj));
 	trigger(fireEvent);
     }
@@ -286,13 +303,7 @@
     // First run
     updateObject(); // before Object.observe
 
-    observe(window.hashbang);
-    if (typeof Object.observe == 'function' && typeof window.__defineSetter__ == 'function') {
-	log("Watching window.hashbang");
-	var watchValue=window.hashbang;
-	window.__defineGetter__('hashbang', function() {return watchValue;});
-	window.__defineSetter__('hashbang', function(val) {watchValue=val; !lock && updateHash(); return watchValue;});
-    }
+    window.hashbang = createProxy(window.hashbang);
 
     // Observe Hash
     if ("onhashchange" in window) {
@@ -300,6 +311,6 @@
 	listen(window, "onhashchange", updateObject); // ie8
 	// window.onhashchange=updateObject; // ie8
     } else {
-	throw ("Hashbang: The event hashchange is not supported!");
+	throw ("The event hashchange is not supported!");
     }
 })();
