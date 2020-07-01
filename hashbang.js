@@ -135,7 +135,7 @@
 		const changed = target[key] !== value;
 
 		log(`${key} = ${value}`);
-		if (typeof value === 'object') {
+		if (typeof value === 'object' && value !== null) {
 		    target[key] = createProxy(value);
 		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
 		} else {
