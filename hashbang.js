@@ -135,7 +135,9 @@
 		const changed = target[key] !== value;
 
 		log(`${key} = ${value}`);
-		if (typeof value === 'object' && value !== null) {
+		if (value === null) {
+		    delete target[key];
+		} else if (typeof value === 'object') {
 		    target[key] = createProxy(value);
 		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
 		} else {
@@ -155,7 +157,9 @@
 		    delete target[prop];
 		    log(`delete ${prop}`);
 		    updateHash();
+		    return true;
 		}
+		return false;
 	    }
 	});
     }
