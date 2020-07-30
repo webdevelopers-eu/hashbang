@@ -136,7 +136,9 @@
 
 		log(`${key} = ${value}`);
 		if (value === null) {
-		    delete target[key];
+		    if (typeof target[key] != 'undefined') { // for error: 'deleteProperty' on proxy: trap returned falsish for property XY
+			delete target[key];
+		    }
 		} else if (typeof value === 'object') {
 		    target[key] = createProxy(value);
 		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
