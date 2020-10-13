@@ -159,9 +159,8 @@
 		    delete target[prop];
 		    log(`delete ${prop}`);
 		    updateHash();
-		    return true;
 		}
-		return false;
+		return true; // always true
 	    }
 	});
     }
