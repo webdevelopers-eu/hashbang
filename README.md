@@ -100,19 +100,19 @@ window.hashbangUnobserve(prop, callback);
 
 Params:
 * `prop` mixed
-** **string**: name of the property on `window.hashbang` object.
-** **array**: of nested `window.hashbang` property names. E.g. to watch `window.module.id` use `["module", "id"]`
-** **undefined** or `false`: watch whole object
+  * **string**: name of the property on `window.hashbang` object.
+  * **array**: of nested `window.hashbang` property names. E.g. to watch `window.module.id` use `["module", "id"]`
+  * **undefined** or `false`: watch whole object
 * `callback(newVal, oldVal)` your callback function
 * `filter` is used to call object only if the new value matches
-** `function(newVal, oldVal)`: if the filter is a function it must return `true` or `false`
-** `RegExp`: you can pass regexp object to match value against. All values (even undefined) are converted to string before matching.
-** **string**: any fixed string that the property value must match in. All property values are converted to string first.
+  * `function(newVal, oldVal)`: if the filter is a function it must return `true` or `false`
+  * `RegExp`: you can pass regexp object to match value against. All values (even undefined) are converted to string before matching.
+  * **string**: any fixed string that the property value must match in. All property values are converted to string first.
 * `event` can by any of this values
-** `hashbang-init` - to run the callback immediatelly after calling `window.hashbangObserve()` if `filter` matches
-** `hashbang-parse` - to run the callback when URL is directly modified
-** `hashbang-serialize` - to run the callback when `window.hashbang` object is modified directly
-** **array**: or an array of any combination of values above
+  * `hashbang-init` - to run the callback immediatelly after calling `window.hashbangObserve()` if `filter` matches
+  * `hashbang-parse` - to run the callback when URL is directly modified
+  * `hashbang-serialize` - to run the callback when `window.hashbang` object is modified directly
+  * **array**: or an array of any combination of values above
 
 Examples:
 ```
