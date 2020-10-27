@@ -307,6 +307,7 @@
 	observers.forEach(function(observer) {
 	    const val = getProp(observer.prop);
 	    const valJSON = JSON.stringify(val);
+	    const valLast = observer.last && JSON.parse(observer.last);
 
 	    if (observer.event.indexOf(ev.type) == -1) {
 		return;
@@ -315,8 +316,8 @@
 		return;
 	    }
 
-	    if (observer.filter(val)) {
-		observer.callback(val, observer.last && JSON.parse(observer.last));
+	    if (observer.filter(val, valLast)) {
+		observer.callback(val, valLast);
 	    }
 
 	    observer.last = valJSON;
@@ -336,11 +337,17 @@
      * window.hashbang.module.id=123; // will trigger myCallback
      * location.hash="#!module[id]=345"; // will NOT trigger (hashbang-parse event not specified)
      *
+     * window.hashbangObserve(["module", "id"], myCallback, false, 'hashbang-serialize');
+     *
+     * // Run immediatelly (hashbang-init) and everytime URL changes (hashbang-parse)
+     * window.hashbangObserve("open", myCallback, false, ['hashbang-parse', 'hashbang-init']);
+     *
+     *
      * @access private
      * @param mixed string or array of window.hashbang object nested keys or false to don't match property name
      * @param function callback(newValue, oldValue)
-     * @param mixed filter callback, or RegExp object or string or number to match new value to
-     * @param mixed event string 'hashbang-parse': to listen only when URL hashbang changes, 'hashbang-serialize': listen when window.hashbang is changed, undefined: listen to both
+     * @param mixed filter callback, or RegExp object or string or number to match new value to. undefined or false: always call callback. To test empty/undefined value use: /^$/
+     * @param mixed event string 'hashbang-parse': to listen only when URL hashbang changes, 'hashbang-serialize': listen when window.hashbang is changed, 'hashbang-init': run immediatelly, undefined: listen to hashbang-serialize & hashbang-parse, or array of select events
      * @return Window object
      */
     window.hashbangObserve = function(prop, callback, filter, event) {
@@ -350,15 +357,20 @@
 	    event = event.split(/\s+/);
 	}
 
-	prop = typeof prop == 'string' ? [prop] : prop;
-
-	observers.push({
+	prop = typeof prop == 'object' ? prop : [prop];
+	const propVal = getProp(prop);
+	const observer = {
 	    "prop": prop,
 	    "event": event,
-	    "last": JSON.stringify(getProp(prop)),
+	    "last": JSON.stringify(propVal),
 	    "callback": callback,
-	    "filter": typeof filter == 'function' ? filter : function(v) {return !filter || (v + '').match(filter);}
-	});
+	    "filter": typeof filter == 'function' ? filter : function(v, o) {return !filter || ((v || '') + '').match(filter);}
+	};
+
+	observers.push(observer);
+	if (event.indexOf('hashbang-init') != -1 && observer.filter(propVal)) {
+	    observer.callback(propVal);
+	}
 
 	return this;
     };
@@ -397,14 +409,15 @@
     function getProp(prop) {
 	var val = window.hashbang;
 	prop.forEach(function(p) {
-	    val = typeof val == 'undefined' ? undefined : val[p];
+	    if (p) {
+		val = typeof val == 'undefined' ? undefined : val[p];
+	    }
 	});
 	return val;
     }
 
     // First run
     updateObject(); // before Object.observe
-
     window.hashbang = createProxy(window.hashbang);
 
     // Observe Hash
