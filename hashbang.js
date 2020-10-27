@@ -95,23 +95,12 @@
     }
 
     function trigger(name) {
-	log("Triggering event " + name + " on window object...");
-	var el=document;
-	var e;
-	if (typeof jQuery == 'function') {
-	    jQuery('body').trigger(name);
-	} else if (document.createEventObject) { // IE
-	    e=document.createEventObject();
-	    try {
-		el.fireEvent(name, e);
-	    } catch (e) { // IE8 custom events fail!
-		log("WARNING: Include jQuery on the page to fire events in archaic browsers.");
-	    }
-	} else {
-	    e=document.createEvent('HTMLEvents');
-	    e.initEvent(name, true, true);
-	    el.dispatchEvent(e);
-	}
+	const el=document;
+	const e=document.createEvent('HTMLEvents');
+	e.initEvent(name, true, true);
+
+	log("Triggering event " + name + " on document object");
+	el.dispatchEvent(e);
     }
 
     function listen(obj, name, callback) {
@@ -304,6 +293,109 @@
 	return obj;
     };
 
+    /**
+     * List of observers installed by window.hashbangObserve()
+     * @access private
+     * @var Array
+     */
+    var observers = [];
+    listen(window, 'hashbang-parse', observe);
+    listen(window, 'hashbang-serialize', observe);
+
+    function observe(ev) {
+	observers.forEach(function(observer) {
+	    const val = getProp(observer.prop);
+	    const valJSON = JSON.stringify(val);
+
+	    if (observer.event.indexOf(ev.type) == -1) {
+		return;
+	    }
+	    if (valJSON == observer.last) {
+		return;
+	    }
+
+	    if (observer.filter(val)) {
+		observer.callback(val, observer.last && JSON.parse(observer.last));
+	    }
+
+	    observer.last = valJSON;
+	});
+    }
+
+    /**
+     * Observe hashbang property change.
+     *
+     * Examples:
+     *
+     * window.hashbangObserve('open', myCallback);
+     * window.hashbang.open=123; // will trigger
+     * location.hash="#!open=345"; // will trigger
+     *
+     * window.hashbangObserve(["module", "id"], myCallback, /\d/, 'hashbang-serialize');
+     * window.hashbang.module.id=123; // will trigger myCallback
+     * location.hash="#!module[id]=345"; // will NOT trigger (hashbang-parse event not specified)
+     *
+     * @access private
+     * @param mixed string or array of window.hashbang object nested keys or false to don't match property name
+     * @param function callback(newValue, oldValue)
+     * @param mixed filter callback, or RegExp object or string or number to match new value to
+     * @param mixed event string 'hashbang-parse': to listen only when URL hashbang changes, 'hashbang-serialize': listen when window.hashbang is changed, undefined: listen to both
+     * @return void
+     */
+    window.hashbangObserve = function(prop, callback, filter, event) {
+	if (!event) {
+	    event = ['hashbang-serialize', 'hashbang-parse'];
+	} else if (typeof event == 'string') {
+	    event = event.split(/\s+/);
+	}
+
+	prop = typeof prop == 'string' ? [prop] : prop;
+
+	observers.push({
+	    "prop": prop,
+	    "event": event,
+	    "last": JSON.stringify(getProp(prop)),
+	    "callback": callback,
+	    "filter": typeof filter == 'function' ? filter : function(v) {return !filter || (v + '').match(filter);}
+	});
+    };
+
+    /**
+     * Unobserve hashbang property.
+     *
+     * Example:
+     *
+     * window.hashbangObserve(["module", "id"], myCallback, /\d/, 'hashbang-parse');
+     *
+     * window.hashbangUnobserve(["module", "id"], myCallback);
+     * or
+     * window.hashbangUnobserve(false, myCallback);
+     *
+     * @access private
+     * @param mixed string or array of window.hashbang object nested keys or false to don't match property name
+     * @param function callback to match
+     * @return void
+     */
+    window.hashbangUnobserve = function(prop, callback) {
+	prop = typeof prop == 'string' ? [prop] : prop;
+
+	observers = observers.filter(function(observer) {
+	    if (prop && JSON.stringify(observer.prop) != JSON.stringify(prop)) {
+		return true;
+	    } else if (callback != observer.callback) {
+		return true;
+	    }
+	    return false;
+	});
+    };
+
+    function getProp(prop) {
+	var val = window.hashbang;
+	prop.forEach(function(p) {
+	    val = typeof val == 'undefined' ? undefined : val[p];
+	});
+	return val;
+    }
 
     // First run
     updateObject(); // before Object.observe
