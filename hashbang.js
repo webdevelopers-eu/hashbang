@@ -83,6 +83,7 @@
 	var url = (window.location.href + '#').replace(/#.*$/, hash.replace(/#+$/, ''));
 
 	//window.location.href=url; // Setting '#' or '' scrolls the page up in Ch73
+
 	history.replaceState({"hashbang": true}, "", url);
 
 	log("Set new hash: " + hash + " | current url: " + url);
@@ -340,7 +341,7 @@
      * @param function callback(newValue, oldValue)
      * @param mixed filter callback, or RegExp object or string or number to match new value to
      * @param mixed event string 'hashbang-parse': to listen only when URL hashbang changes, 'hashbang-serialize': listen when window.hashbang is changed, undefined: listen to both
-     * @return void
+     * @return Window object
      */
     window.hashbangObserve = function(prop, callback, filter, event) {
 	if (!event) {
@@ -358,6 +359,8 @@
 	    "callback": callback,
 	    "filter": typeof filter == 'function' ? filter : function(v) {return !filter || (v + '').match(filter);}
 	});
+
+	return this;
     };
 
     /**
@@ -374,7 +377,7 @@
      * @access private
      * @param mixed string or array of window.hashbang object nested keys or false to don't match property name
      * @param function callback to match
-     * @return void
+     * @return Window object
      */
     window.hashbangUnobserve = function(prop, callback) {
 	prop = typeof prop == 'string' ? [prop] : prop;
@@ -387,6 +390,8 @@
 	    }
 	    return false;
 	});
+
+	return this;
     };
 
     function getProp(prop) {
