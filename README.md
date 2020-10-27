@@ -21,10 +21,10 @@ Just include `hashbang.js` javascript file on your page.
 
 `<script src="my-directory-somewhere/hashbang.js"></script>`
 
-<pre>
+```
   window.hashbang.gallery=[11, 12];
   window.hashbang.zoom=2;
-</pre>
+```
 
 This javascript code will cause URL hash part to change to
 `#!gallery[]=11&gallery[]=12&zoom=2`
@@ -61,13 +61,13 @@ That is where Hashbang Object javascript comes in.
 John programs his gallery so whenever an image is selected he
 stores image id into Hashbang Object.
 
-<pre>
+```
 window.hashbang.gallery=[];
 
 function onSelect(imageId) {
   window.hashbang.gallery.push(imageId);
 }
-</pre>
+```
 
 That is all! Everything you store in
 `window.hashbang` object will get serialized into URL
@@ -80,14 +80,6 @@ In this case after the user selects multiple images the URL will look for exampl
 When this URL is shared and friend visits the page the `window.hashbang.gallery` array
 will contain the previously stored values so you can pre-select the same images upon page load.
 
-## Compatibility
-
-This javascript is framework-independent library and can be used
-with or without any javascript framework like jQuery, AngularJS,
-Dojo, MooTools or DHTMLX.
-
-All modern browsers from IE8 up. You have to include jQuery on the page for IE8 in order to use events.
-
 ## Events
 
 You can listen to following events on `window` object:
@@ -95,6 +87,30 @@ You can listen to following events on `window` object:
 *   **hashbang-init** - after initialization of Hashbang Object and creation of `window.hashbang` object.
 *   **hashbang-parse** - upon load and URL hash change and `window.hashbang` object update.
 *   **hashbang-serialize** - upon `window.hashbang` object change and URL hash update.
+
+## Observers
+
+There are two methods that provide callback functionality when `window.hashbang`
+or URL hash or any of those changes.
+
+```
+window.hashbangObserve(prop, callback [, filter, [event] ]);
+window.hashbangUnobserve(prop, callback);
+```
+
+Examples:
+```
+window.hashbangObserve('open', myCallback);
+window.hashbang.open=123; // will trigger
+location.hash="#!open=345"; // will trigger
+
+window.hashbangObserve(["module", "id"], myCallback, /\d/, 'hashbang-serialize');
+window.hashbang.module.id=123; // will trigger myCallback
+location.hash="#!module[id]=345"; // will NOT trigger (hashbang-parse event not specified)
+
+// Call only when window.hashbang == "open"
+window.hashbangObserve("contact", myCallback, "open", 'hashbang-serialize');
+```
 
 ## Advanced Configuration
 
@@ -110,7 +126,7 @@ Two useful functions are provided for creation and parsing of hashbang hashes:
 *   `window.hashbangSerialize(object):hash`
 
 Example:
-<pre>
+```
 $(link).attr('href', window.hashbangSerialize({"a": 1, "b": 2}));
 var info=window.hashbangParse("#!gallery[]=11&amp;gallery[]=12&amp;zoom=2");
-</pre>
+```
