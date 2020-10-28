@@ -73,7 +73,7 @@
 
 	//window.location.href=url; // Setting '#' or '' scrolls the page up in Ch73
 	history.pushState({"hashbang": true}, document.title || "", url);
-	console.debug("Hashbang: Record history, new hash: %s, current url: %s", hash, url);
+	// console.debug("Hashbang: Record history, new hash: %s, current url: %s", hash, url);
     }
 
     function getHash() {
@@ -87,7 +87,7 @@
 	const e=document.createEvent('HTMLEvents');
 	e.initEvent(name, true, true);
 
-	console.debug("Hashbang: Triggering event '%s' on document object", name);
+	// console.debug("Hashbang: Triggering event '%s' on document object", name);
 	el.dispatchEvent(e);
     }
 
@@ -233,7 +233,7 @@
 	window.hashbang = createProxy(obj instanceof Array && !obj.length ? {} : obj); // root must not be an Array
 
 	// createProxy(window.hashbang);
-	console.debug("Hashbang: Object updated (%s): %o", fireEvent, obj);
+	// console.debug("Hashbang: Object updated (%s): %o", fireEvent, obj);
 	trigger(fireEvent);
     }
 
@@ -317,7 +317,7 @@
 		    window.hashbangUnobserve(observer.prop, observer.callback);
 		}
 	    } else {
-		console.debug('Hashbang: The "%s" observer was filtered. Value changed: %o => %o', observer.prop.join('.'), last, current);
+		// console.debug('Hashbang: The "%s" observer was filtered. Value changed: %o => %o', observer.prop.join('.'), last, current);
 	    }
 	});
     }
@@ -376,7 +376,7 @@
 	    }
 	}
 
-	console.debug('Hashbang: New "%s" observer on event %s.', observer.prop.join('.'), observer.event.join(', '));
+	// console.debug('Hashbang: New "%s" observer on event %s.', observer.prop.join('.'), observer.event.join(', '));
 	return this;
     };
 
@@ -409,7 +409,7 @@
 	});
 
 	if (idx != -1) {
-	    console.debug('Hashbang: The "%s" observer was removed: %o', prop.join('.'), callback);
+	    // console.debug('Hashbang: The "%s" observer was removed: %o', prop.join('.'), callback);
 	    observers.splice(idx, 1);
 	}
 
