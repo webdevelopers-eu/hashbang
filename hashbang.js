@@ -236,14 +236,14 @@
 	if (getHash() == ourHashUpdate) {
 	    return; // triggered by our updateHash()
 	}
-	var fireEvent='hashbang' in window ? 'hashbang-parse' : 'hashbang-init';
-	var hash=getHash();
-	ourHashUpdate=hash;
-	hasHashbangFormat=isHashbang(hash);
+	var fireEvent = 'hashbang' in window ? 'hashbang-parse' : 'hashbang-init';
+	var hash = getHash();
+	ourHashUpdate = hash;
+	hasHashbangFormat = isHashbang(hash);
 	if (!hasHashbangFormat) fireEvent='hashbang-unparsable';
-	var obj=window.hashbangParse(hash);
+	var obj = window.hashbangParse(hash);
 
-	window.hashbang=createProxy(obj);
+	window.hashbang = createProxy(obj instanceof Array && !obj.length ? {} : obj); // root must not be an Array
 
 	// createProxy(window.hashbang);
 	log("Object updated (" + fireEvent + "): " + JSON.stringify(obj));
@@ -251,13 +251,17 @@
     }
 
     function isHashbang(hash) {
-	return (hash.substr(0, window.hashbangSeparator.length) == window.hashbangSeparator && hash.substr(2));
+	if (!hash || hash == '#' || hash == window.hashbangSeparator) { // empty hashbang
+	    return true;
+	} else {
+	    return (hash.substr(0, window.hashbangSeparator.length) == window.hashbangSeparator && hash.substr(2));
+	}
     }
 
     window.hashbangParse=function (hash) {
 	var obj={};
 
-	if (isHashbang(hash)) {
+	if (isHashbang(hash) || (window.hashbang && Object.keys(window.hashbang).length)) {
 	    var pointer;
 	    var pathRE=/^(\/[\/a-z0-9. %_~!$'()*+,;:@-]*)(\?|$)/i; // no '&=' even though path part allows it
 	    hash=hash.substr(window.hashbangSeparator.length); // remove '#!'
@@ -305,19 +309,24 @@
 
     function observe(ev) {
 	observers.forEach(function(observer) {
-	    const val = getProp(observer.prop);
-	    const valJSON = JSON.stringify(val);
-	    const valLast = observer.last && JSON.parse(observer.last);
-
 	    if (observer.event.indexOf(ev.type) == -1) {
 		return;
 	    }
+
+	    const val = getProp(observer.prop);
+	    const valJSON = JSON.stringify(val);
+
 	    if (valJSON == observer.last) {
 		return;
 	    }
 
+	    const valLast = observer.last && JSON.parse(observer.last);
+
 	    if (observer.filter(val, valLast)) {
 		observer.callback(val, valLast);
+		if (observer.once) {
+		    window.hashbangUnobserve(observer.prop, observer.callback);
+		}
 	    }
 
 	    observer.last = valJSON;
@@ -348,9 +357,10 @@
      * @param function callback(newValue, oldValue)
      * @param mixed filter callback, or RegExp object or string or number to match new value to. undefined or false: always call callback. To test empty/undefined value use: /^$/
      * @param mixed event string 'hashbang-parse': to listen only when URL hashbang changes, 'hashbang-serialize': listen when window.hashbang is changed, 'hashbang-init': run immediatelly, undefined: listen to hashbang-serialize & hashbang-parse, or array of select events
+     * @param bool once remove callback after first use, default: false
      * @return Window object
      */
-    window.hashbangObserve = function(prop, callback, filter, event) {
+    window.hashbangObserve = function(prop, callback, filter, event, once) {
 	if (!event) {
 	    event = ['hashbang-serialize', 'hashbang-parse'];
 	} else if (typeof event == 'string') {
@@ -364,7 +374,8 @@
 	    "event": event,
 	    "last": JSON.stringify(propVal),
 	    "callback": callback,
-	    "filter": typeof filter == 'function' ? filter : function(v, o) {return !filter || ((v || '') + '').match(filter);}
+	    "filter": typeof filter == 'function' ? filter : function(v, o) {return !filter || ((v || '') + '').match(filter);},
+	    "once": !!once
 	};
 
 	observers.push(observer);
