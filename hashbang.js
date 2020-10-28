@@ -53,20 +53,8 @@
 (function() {
     'use strict';
 
-    var log=function() {
-	arguments[0]='Hashbang Object: ' + arguments[0];
-	if (console && console.log) {
-	    if (console.log.apply) {
-		console.log.apply(console, arguments);
-	    } else { // IE8
-		console.log(arguments[0]);
-	    }
-	}
-    };
-    log("Loading... " + (typeof Object.observe == 'function' ? 'Object.observe available' : ''));
-
     if ('hashbang' in window) {
-	log("ERROR: window.hashbang already exists! The Hashbang script was included twice or there is other conflicting app.");
+	console.debug("Hashbang: ERROR: window.hashbang already exists! The Hashbang script was included twice or there is other conflicting app.");
 	return;
     }
 
@@ -78,15 +66,14 @@
     var hashbangInterval;
 
     function setHash(hash) {
+	if (ourHashUpdate == hash) return; // Already set
 	ourHashUpdate=hash;
 	// window.location.hash=ourHashUpdate; - FF unescapes the values
 	var url = (window.location.href + '#').replace(/#.*$/, hash.replace(/#+$/, ''));
 
 	//window.location.href=url; // Setting '#' or '' scrolls the page up in Ch73
-
-	history.replaceState({"hashbang": true}, "", url);
-
-	log("Set new hash: " + hash + " | current url: " + url);
+	history.pushState({"hashbang": true}, document.title || "", url);
+	console.debug("Hashbang: Record history, new hash: %s, current url: %s", hash, url);
     }
 
     function getHash() {
@@ -100,31 +87,30 @@
 	const e=document.createEvent('HTMLEvents');
 	e.initEvent(name, true, true);
 
-	log("Triggering event " + name + " on document object");
+	console.debug("Hashbang: Triggering event '%s' on document object", name);
 	el.dispatchEvent(e);
     }
 
     function listen(obj, name, callback) {
 	if(obj.addEventListener) {
-	    // log("Using addEventListener for " + name);
+	    // console.debug("Hashbang: Using addEventListener for " + name);
 	    obj.addEventListener(name, callback, false);
 	} else if (obj.attachEvent) {
-	    // log("Using attachEvent for " + name);
+	    // console.debug("Hashbang: Using attachEvent for " + name);
 	    obj.attachEvent(name, callback, false);
 	}
     }
 
     function createProxy(obj) {
 	if (typeof obj != 'object' || obj === null) {
-	    log("Warning: Hashbang data must be of type object, array, string, number! Received `" + (typeof obj) + "`", obj);
+	    console.debug("Hashbang: Warning: Hashbang data must be of type object, array, string, number! Received `" + (typeof obj) + "`", obj);
 	    obj = {};
 	}
 
 	return new Proxy(obj,{
 	    set: function(target, key, value) {
-		const changed = target[key] !== value;
+		const oldVal = target[key];
 
-		log(`${key} = ${value}`);
 		if (value === null) {
 		    if (typeof target[key] != 'undefined') { // for error: 'deleteProperty' on proxy: trap returned falsish for property XY
 			delete target[key];
@@ -133,11 +119,12 @@
 		    target[key] = createProxy(value);
 		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
 		} else {
-		    target[key] = value;
+		    target[key] = value + ""; // Enforce always a string to be consistent with reading from #hash
 		}
+		// console.debug("Hashbang: Set %s:=%o", key, target[key]);
 
-
-		if (changed) {
+		if (oldVal != target[key]) {
+		    console.debug('Hashbang: The "%s" property changed %o => %o', key, oldVal, target[key]);
 		    updateHash();
 		}
 
@@ -147,7 +134,7 @@
 	    deleteProperty: function(target, prop) {
 		if (prop in target) {
 		    delete target[prop];
-		    log(`delete ${prop}`);
+		    // console.debug('Hashbang: Delete %o', prop);
 		    updateHash();
 		}
 		return true; // always true
@@ -169,7 +156,7 @@
 
     window.hashbangSerialize=function(what) {
 	function serialize(keys, val) {
-	    // log('Serializing', keys, val);
+	    // console.debug('Hashbang: Serializing', keys, val);
 	    var ret=[], i;
 
 	    if (val === null) { // null is object
@@ -201,7 +188,7 @@
 		}
 		break;
 	    default:
-		log("The value type '" + (typeof val) +"' is not supported.");
+		console.debug("Hashbang: The value type %s is not supported.", typeof val);
 	    }
 	    return ret;
 	}
@@ -246,7 +233,7 @@
 	window.hashbang = createProxy(obj instanceof Array && !obj.length ? {} : obj); // root must not be an Array
 
 	// createProxy(window.hashbang);
-	log("Object updated (" + fireEvent + "): " + JSON.stringify(obj));
+	console.debug("Hashbang: Object updated (%s): %o", fireEvent, obj);
 	trigger(fireEvent);
     }
 
@@ -303,33 +290,35 @@
      * @access private
      * @var Array
      */
-    var observers = [];
+    const observers = [];
     listen(window, 'hashbang-parse', observe);
     listen(window, 'hashbang-serialize', observe);
 
     function observe(ev) {
 	observers.forEach(function(observer) {
+	    const current = getProp(observer.prop);
+	    const currentJSON = JSON.stringify(current);
+	    const lastJSON = observer.lastJSON;
+	    observer.lastJSON = currentJSON; // copy
+
 	    if (observer.event.indexOf(ev.type) == -1) {
 		return;
 	    }
 
-	    const val = getProp(observer.prop);
-	    const valJSON = JSON.stringify(val);
-
-	    if (valJSON == observer.last) {
+	    if (currentJSON == lastJSON) {
 		return;
 	    }
 
-	    const valLast = observer.last && JSON.parse(observer.last);
-
-	    if (observer.filter(val, valLast)) {
-		observer.callback(val, valLast);
+	    const last = lastJSON && JSON.parse(lastJSON);
+	    if (observer.filter(current, last)) {
+		console.debug('Hashbang: The "%s" observer fired on "%s". Value changed: %o => %o', observer.prop.join('.'), ev.type, last, current);
+		observer.callback(current, last);
 		if (observer.once) {
 		    window.hashbangUnobserve(observer.prop, observer.callback);
 		}
+	    } else {
+		console.debug('Hashbang: The "%s" observer was filtered. Value changed: %o => %o', observer.prop.join('.'), last, current);
 	    }
-
-	    observer.last = valJSON;
 	});
     }
 
@@ -372,17 +361,22 @@
 	const observer = {
 	    "prop": prop,
 	    "event": event,
-	    "last": JSON.stringify(propVal),
+	    "lastJSON": JSON.stringify(propVal),
 	    "callback": callback,
 	    "filter": typeof filter == 'function' ? filter : function(v, o) {return !filter || ((v || '') + '').match(filter);},
-	    "once": !!once
+	    "once": !!once || (event.indexOf('hashbang-init') != -1 && event.length == 1)
 	};
 
 	observers.push(observer);
+
 	if (event.indexOf('hashbang-init') != -1 && observer.filter(propVal)) {
 	    observer.callback(propVal);
+	    if (observer.once) {
+		window.hashbangUnobserve(observer.prop, observer.callback);
+	    }
 	}
 
+	console.debug('Hashbang: New "%s" observer on event %s.', observer.prop.join('.'), observer.event.join(', '));
 	return this;
     };
 
@@ -405,14 +399,19 @@
     window.hashbangUnobserve = function(prop, callback) {
 	prop = typeof prop == 'string' ? [prop] : prop;
 
-	observers = observers.filter(function(observer) {
+	const idx = observers.findIndex(function(observer) {
 	    if (prop && JSON.stringify(observer.prop) != JSON.stringify(prop)) {
-		return true;
+		return false;
 	    } else if (callback != observer.callback) {
-		return true;
+		return false;
 	    }
-	    return false;
+	    return true;
 	});
+
+	if (idx != -1) {
+	    console.debug('Hashbang: The "%s" observer was removed: %o', prop.join('.'), callback);
+	    observers.splice(idx, 1);
+	}
 
 	return this;
     };
@@ -429,7 +428,7 @@
 
     // First run
     updateObject(); // before Object.observe
-    window.hashbang = createProxy(window.hashbang);
+    // window.hashbang = createProxy(window.hashbang);
 
     // Observe Hash
     if ("onhashchange" in window) {
