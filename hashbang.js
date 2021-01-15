@@ -117,7 +117,7 @@
 		    }
 		} else if (typeof value === 'object') {
 		    target[key] = createProxy(value);
-		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
+		    Object.keys(value).forEach(function(k) {target[key][k] = value[k];});
 		} else {
 		    target[key] = value + ""; // Enforce always a string to be consistent with reading from #hash
 		}
