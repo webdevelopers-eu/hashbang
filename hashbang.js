@@ -53,6 +53,12 @@
 (function() {
     'use strict';
 
+    // Is it already loaded?
+    if (window.hashbangPluginLoaded) {
+	return;
+    }
+    window.hashbangPluginLoaded=true;
+
     if ('hashbang' in window) {
 	console.debug("Hashbang: ERROR: window.hashbang already exists! The Hashbang script was included twice or there is other conflicting app.");
 	return;
@@ -111,13 +117,13 @@
 	    set: function(target, key, value) {
 		const oldVal = target[key];
 
-		if (value === null) {
+		if (value === null || typeof value == "undefined") {
 		    if (typeof target[key] != 'undefined') { // for error: 'deleteProperty' on proxy: trap returned falsish for property XY
 			delete target[key];
 		    }
 		} else if (typeof value === 'object') {
 		    target[key] = createProxy(value);
-		    Object.keys(value).forEach((k) => target[key][k] = value[k]);
+		    Object.keys(value).forEach(function(k) {target[key][k] = value[k];});
 		} else {
 		    target[key] = value + ""; // Enforce always a string to be consistent with reading from #hash
 		}
@@ -296,12 +302,12 @@
 
     function observe(ev) {
 	observers.forEach(function(observer) {
-	    const current = getProp(observer.prop);
+	    const current = getObservedPropData(observer.prop);
 	    const currentJSON = JSON.stringify(current);
 	    const lastJSON = observer.lastJSON;
 	    observer.lastJSON = currentJSON; // copy
 
-	    if (observer.event.indexOf(ev.type) == -1) {
+	    if (observer.event.indexOf(ev.type) == -1) { // after we update lastJSON
 		return;
 	    }
 
@@ -357,7 +363,7 @@
 	}
 
 	prop = typeof prop == 'object' ? prop : [prop];
-	const propVal = getProp(prop);
+	const propVal = getObservedPropData(prop);
 	const observer = {
 	    "prop": prop,
 	    "event": event,
@@ -416,7 +422,7 @@
 	return this;
     };
 
-    function getProp(prop) {
+    function getObservedPropData(prop) {
 	var val = window.hashbang;
 	prop.forEach(function(p) {
 	    if (p) {
@@ -433,9 +439,7 @@
     // Observe Hash
     if ("onhashchange" in window) {
 	listen(window, "hashchange", updateObject);
-	listen(window, "onhashchange", updateObject); // ie8
-	// window.onhashchange=updateObject; // ie8
     } else {
 	throw ("The event hashchange is not supported!");
     }
-})();
+})(window);
